@@ -239,7 +239,25 @@ def test_status_acronym(status):
         form = Fore.YELLOW + Style.BRIGHT
     return form + ret + Style.RESET_ALL
 
+def print_summary(stati, verbose):
+    print("===\nTest summary\n===")
+    for s in stati:
+        if not verbose and s.ok:
+            continue
+        code = s.meta['code'] if 'code' in s.meta and s.meta['code'] is not None else '??'
+        print("- {} {} ({: >6.3f}s) -> {}{}".format(test_status_acronym(s), s.case, s.time, code, " (check: {})".format(s.meta['checkcode']) if 'checkcode' in s.meta else ""))
+        if verbose:
+            if 'diff' in s.meta:
+                if len(s.meta['diff']) > 512:
+                    print("[..diff too long, snip..]")
+                else:
+                    pprint.pprint(s.meta['diff'])
+            if 'comment' in s.meta and s.meta['comment']:
+                print("Checker (code {}) comment:")
+                print(s.meta['comment'])
+
 # TODO: handle wrapper callers like `oiejq`
+# TODO: handle online test generation
 @click.command()
 @click.argument('app')
 @click.argument('tests')
@@ -311,22 +329,8 @@ def main(app, tests, outputs, s_order, s_verify, checker, timeout, processes, fa
 
     if correct == total:
         print(Fore.GREEN + Style.BRIGHT + "AC! :)" + Style.RESET_ALL)
-    else:
-        print("===\nTest summary\n===")
-        for s in stati:
-            if not verbose and s.ok:
-                continue
-            code = s.meta['code'] if 'code' in s.meta and s.meta['code'] is not None else '??'
-            print("- {} {} ({: >6.3f}s) -> {}".format(test_status_acronym(s), s.case, s.time, code))
-            if verbose:
-                if 'diff' in s.meta:
-                    if len(s.meta['diff']) > 512:
-                        print("[..diff too long, snip..]")
-                    else:
-                        pprint.pprint(s.meta['diff'])
-                if 'comment' in s.meta:
-                    print("Checker comment:")
-                    print(s.meta['comment'])
+
+    print_summary(stati, verbose)
 
     end = time.time()
 
