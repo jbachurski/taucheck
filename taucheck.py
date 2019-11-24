@@ -22,7 +22,9 @@ except ImportError as e:
         print("100%... done")
 import click
 
-
+# Temporary files: a decorated function receives an additional parameter,
+# which is a random temporary filename. The file is always deleted after
+# leaving the function.
 def temp_filename(suffix='.tmp', dlen=4):
     d = "".join(random.choice(string.hexdigits) for _ in range(dlen))
     return d + suffix
@@ -36,7 +38,15 @@ def with_temporary_file(func, suffix='.tmp', dlen=4):
     return wrapped
 
 
+# Verifiers are objects that take care of testing singular cases.
+# All of them run the app, but they have different ways of deciding
+# if the result is correct. A VerifyStatus object should be a summary
+# of the results for a given case.
+
 VerifyStatus = collections.namedtuple('VerifyStatus', ['ok', 'time', 'case', 'meta'])
+# `ok` is `True` if everything was correct, `False` if the result is wrong,
+# None otherwise (reason should be specified in `meta`)
+# `case` is the case name (stem of the input file), `time` is the time taken.
 
 class Verifier:
     def __init__(self, app, in_path, out_path=None, checker=None, timeout=600):
@@ -54,6 +64,7 @@ class Verifier:
 
     @with_temporary_file
     def __call__(self, case, got):
+        # got is a temporary file for program output
         try:
             start = time.time()
             subprocess.run(
@@ -66,6 +77,8 @@ class Verifier:
 
         meta = {'timeout': False}
         v = self.verify(case, got)
+        # In the simple case, verify returns only the status (`ok`). Otherwise,
+        # it is a dictionary containing the status and metadata.
         if isinstance(v, dict):
             meta = v
             del meta['ok']
@@ -73,9 +86,11 @@ class Verifier:
 
         return VerifyStatus(v, round(end - start, 6), case, meta)
 
+
 class IdenticalOutputVerifier(Verifier):
     def verify(self, case, got):
         return filecmp.cmp(got, self.output_of(case))
+
 
 class LooseOutputVerifier(Verifier):
     def verify(self, case, got):
@@ -83,6 +98,7 @@ class LooseOutputVerifier(Verifier):
         b = open(self.output_of(case)).read()
         return a.split() == b.split()
 
+# TODO: test this
 class CheckerVerifier(Verifier):
     def verify(self, case, got):
         param = [self.checker, self.input_of(case), got]
@@ -98,6 +114,8 @@ available_verifiers = {
     'checker': CheckerVerifier
 }
 
+
+# Input filenames are sorted using these.
 
 def natural_sort(it):
     def tryint(x):
@@ -125,6 +143,8 @@ available_orderings = {
 }
 
 
+# Finds the string in `it` which has the longest common prefix with `string`
+# or decides that there is no good result.
 def find_prefixwise(it, string):
     dec = []
     for key in it:
@@ -147,6 +167,7 @@ def find_prefixwise(it, string):
         raise ValueError("Ambiguous prefix `{}` of {}".format(string, same))
     return dec[-1][1]
 
+# Handles the verifier doing all the work.
 def verify_job(inputs, verifier, verbose):
     stati = []
     for i in inputs:
@@ -154,13 +175,16 @@ def verify_job(inputs, verifier, verbose):
         stati.append(status)
         if verbose > 0:
             print(status)
-        if verbose < 0: # multiprocessing
-            print(status.case)
+        if verbose < 0:
+            # TODO: multiprocessing progress bar
+            pass
     return stati
 
+# Version for multiprocessing (ignore verbose flag, logging is messed up anyway)
 def verify_job_mp(args):
     return verify_job(*args, -1)
 
+# TODO: handle wrapper callers like `oiejq`
 @click.command()
 @click.argument('app')
 @click.argument('tests')
@@ -192,11 +216,13 @@ def main(app, tests, outputs, s_order, s_verify, checker, timeout, processes, ve
     inputs = order(in_path.glob('*.in'))
 
     if processes == 1:
+        # Maybe enable progress bar
         if not verbose:
             inputs = tqdm(inputs)
         stati = verify_job(inputs, verifier_t(*verifier_params), verbose)
     else:
         with multiprocessing.Pool(processes) as pool:
+            # Split the tests in regular strides and create verifiers
             data = [(inputs[start::processes], verifier_t(*verifier_params)) for start in range(processes)]
             stati = sum(pool.map(verify_job_mp, data), [])
 
@@ -207,6 +233,7 @@ def main(app, tests, outputs, s_order, s_verify, checker, timeout, processes, ve
     if correct == total:
         print("AC! :)")
     else:
+        # TODO: better output formatting
         for s in stati:
             if not s.ok:
                 print(s)
