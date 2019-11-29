@@ -330,7 +330,8 @@ def main(app, tests, outputs, s_order, s_verify, checker, timeout, processes, fa
     if correct == total:
         print(Fore.GREEN + Style.BRIGHT + "AC! :)" + Style.RESET_ALL)
 
-    print_summary(stati, verbose)
+    if verbose or correct != total:
+        print_summary(stati, verbose)
 
     end = time.time()
 
