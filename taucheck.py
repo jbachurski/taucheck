@@ -81,10 +81,10 @@ class Verifier:
         self.checker, self.timeout = checker, timeout
 
     def input_of(self, case):
-        return (self.in_path / case).with_suffix('.in')
+        return Path(str(self.in_path / case) + '.in')
 
     def output_of(self, case):
-        return (self.out_path / case).with_suffix('.out')
+        return Path(str(self.out_path / case) + '.out')
 
     def verify(self, case):
         return NotImplemented
