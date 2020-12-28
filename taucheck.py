@@ -42,7 +42,7 @@ import click
 def temp_filename(suffix='.tmp', dlen=4):
     d = "".join(random.choice(string.hexdigits) for _ in range(dlen))
     return d + suffix
-def with_temporary_file(func, suffix='.tmp', dlen=4):
+def with_temporary_file(func, suffix='.tmp', dlen=6):
     def wrapped(*args, **kwargs):
         tmp = temp_filename(suffix, dlen)
         try:
