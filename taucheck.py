@@ -142,7 +142,8 @@ class CheckerVerifier(Verifier):
         param = [self.checker, self.input_of(case), got]
         if self.out_path is not None:
             param.insert(2, self.output_of(case))
-        process = subprocess.run(param, shell=True, timeout=self.timeout, capture_output=True)
+        param = [str(x) for x in param]
+        process = subprocess.run(param, timeout=self.timeout, capture_output=True)
         return {'ok': process.returncode == 0, 'checkcode': process.returncode, 'comment': process.stdout.decode()}
 
 
@@ -253,7 +254,7 @@ def print_summary(stati, verbose):
                 else:
                     pprint.pprint(s.meta['diff'])
             if 'comment' in s.meta and s.meta['comment']:
-                print("Checker (code {}) comment:")
+                print("Checker (code {}) comment:".format(s.meta['checkcode']))
                 print(s.meta['comment'])
 
 # TODO: handle wrapper callers like `oiejq`
@@ -282,10 +283,7 @@ def main(app, tests, outputs, s_order, s_verify, checker, timeout, processes, fa
     order = available_orderings[s_order]
 
     in_path = Path(tests)
-    if outputs is not None or s_verify != 'checker':
-        out_path = Path(outputs if outputs is not None else tests)
-    else:
-        out_path = None
+    out_path = Path(outputs if outputs is not None else tests)
 
     if checker and s_verify != 'checker':
         print("[?] Checker parameter provided but verifier is not checker.")
