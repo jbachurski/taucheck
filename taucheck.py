@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 from pathlib import Path
 import multiprocessing
 import collections
@@ -141,7 +143,7 @@ class CheckerVerifier(Verifier):
     def verify(self, case, got):
         param = [self.checker, self.input_of(case), got]
         if self.out_path is not None:
-            param.insert(2, self.output_of(case))
+            param.append(self.output_of(case))
         param = [str(x) for x in param]
         process = subprocess.run(param, timeout=self.timeout, capture_output=True)
         return {'ok': process.returncode == 0, 'checkcode': process.returncode, 'comment': process.stdout.decode()}
